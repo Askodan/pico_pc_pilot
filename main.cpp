@@ -12,6 +12,7 @@
 
 uint ReceivePin = 5;
 uint TimeOfBlinking = 500;
+uint DiodePin = 10;
 
 uint64_t EndOfBlink = 0;
 queue_t signal_queue;
@@ -27,6 +28,13 @@ void init_receive_pin(uint pin)
     gpio_set_irq_enabled_with_callback(pin, GPIO_IRQ_EDGE_FALL | GPIO_IRQ_EDGE_RISE, true, &irq_NEC_Listener);
 }
 
+void init_diode_pin(uint pin)
+{
+    gpio_init(pin);
+    gpio_set_dir(pin, GPIO_OUT);
+    gpio_put(pin, false);
+}
+
 void led_blinking_task(void);
 void hid_task(NECAnalyzer& analyzer);
 
@@ -35,6 +43,7 @@ int main()
     queue_init(&signal_queue, sizeof(uint64_t), 128);
 
     init_receive_pin(ReceivePin);
+    init_diode_pin(DiodePin);
     NECAnalyzer analyzer;
 
     board_init();
@@ -239,5 +248,7 @@ void tud_hid_set_report_cb(uint8_t instance, uint8_t report_id, hid_report_type_
 //--------------------------------------------------------------------+
 void led_blinking_task(void)
 {
-  board_led_write(EndOfBlink > board_millis());
+  bool diode_light = EndOfBlink > board_millis();
+  board_led_write(diode_light);
+  gpio_put(DiodePin, diode_light);
 } 
