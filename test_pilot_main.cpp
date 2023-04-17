@@ -5,11 +5,12 @@
 #include "pico/util/queue.h"
 #include "hardware/gpio.h"
 #include "irdecoders/necdecoder.hpp"
+#include "irdecoders/rc5decoder.hpp"
 
 uint ReceivePin = 5;
 
 queue_t signal_queue;
-void irq_NEC_Listener(uint gpio, uint32_t events) {
+void irq_Listener(uint gpio, uint32_t events) {
     uint64_t t = to_us_since_boot(get_absolute_time());
     queue_try_add(&signal_queue, &t);
 }
@@ -18,7 +19,7 @@ void init_receive_pin(uint pin)
 {
     gpio_init(pin);
     gpio_pull_up(pin);
-    gpio_set_irq_enabled_with_callback(pin, GPIO_IRQ_EDGE_FALL | GPIO_IRQ_EDGE_RISE, true, &irq_NEC_Listener);
+    gpio_set_irq_enabled_with_callback(pin, GPIO_IRQ_EDGE_FALL | GPIO_IRQ_EDGE_RISE, true, &irq_Listener);
 }
 
 int main()
@@ -31,6 +32,8 @@ int main()
     gpio_set_dir(PICO_DEFAULT_LED_PIN, GPIO_OUT);
     init_receive_pin(ReceivePin);
     NECAnalyzer analyzer;
+    IRAnalyzer baseAnalyzer;
+    RC5Analyzer rc5Analyzer;
     while(true)
     {
         uint64_t new_time;
@@ -38,9 +41,18 @@ int main()
         if(got_value)
         {
             bool success = analyzer.analyze_signal(new_time);
+            // baseAnalyzer.analyze_signal(new_time);
+            bool sucrc = rc5Analyzer.analyze_signal(new_time);
             if(success)
             {
                 printf("read %i with %i\n", analyzer.get_address(), analyzer.get_data());
+                gpio_put(PICO_DEFAULT_LED_PIN, 1);
+                sleep_ms(500);
+                gpio_put(PICO_DEFAULT_LED_PIN, 0);
+            }
+            if(sucrc)
+            {
+                printf("read %i with %i\n", rc5Analyzer.get_address(), rc5Analyzer.get_data());
                 gpio_put(PICO_DEFAULT_LED_PIN, 1);
                 sleep_ms(500);
                 gpio_put(PICO_DEFAULT_LED_PIN, 0);

@@ -1,16 +1,14 @@
 #pragma once
 
+#include "basedecoder.hpp"
 #include "pico/stdlib.h"
 #include <bitset>
 
-class NECAnalyzer
+class NECAnalyzer : public IRAnalyzer
 {
 public:
-    bool analyze_signal(uint64_t new_time);
-    uint8_t get_address() const {return address;}
-    uint8_t get_data() const {return data;}
+    virtual bool analyze_signal(uint64_t new_time) override;
 private:
-    bool is_close(uint current, uint value) const;
 
     void reset_state();
 
@@ -24,8 +22,6 @@ private:
     };
 
     bool analyze_value(uint delta, std::bitset<8>& used_set);
-// settings
-    float Tolerance = 0.2; // in microseconds
 
 // consts
     const uint BaseInterval = 562;
@@ -36,9 +32,6 @@ private:
 // internal state
     AnalyzerState State = AnalyzerState::Init;
     int StateStep = 0;
-    uint64_t last_time = 0;
     std::bitset<8> add_set;
     std::bitset<8> data_set;
-    uint8_t address;
-    uint8_t data;
 };

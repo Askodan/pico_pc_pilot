@@ -3,9 +3,7 @@
 
 bool NECAnalyzer::analyze_signal(uint64_t new_time)
 {
-    uint64_t delta64 = new_time - last_time;
-    uint delta = delta64;
-    last_time = new_time;
+    update_time(new_time);
     // switch would be ok... maybe?
     if (State == AnalyzerState::Init)
     {
@@ -32,13 +30,6 @@ bool NECAnalyzer::analyze_signal(uint64_t new_time)
         }
     }
     return false;
-}
-
-bool NECAnalyzer::is_close(uint current, uint value) const
-{
-    int diff = std::abs((int)current - (int)value);
-    int tol = (int)(Tolerance*value);
-    return  diff < tol;
 }
 
 void NECAnalyzer::reset_state()

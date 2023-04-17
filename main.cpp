@@ -8,6 +8,7 @@
 #include "usb_descriptors.h"
 
 #include "irdecoders/necdecoder.hpp"
+#include "irdecoders/rc5decoder.hpp"
 #include "codes_to_actions.hpp"
 
 uint ReceivePin = 5;
@@ -16,7 +17,7 @@ uint DiodePin = 10;
 
 uint64_t EndOfBlink = 0;
 queue_t signal_queue;
-void irq_NEC_Listener(uint gpio, uint32_t events) {
+void irq_Listener(uint gpio, uint32_t events) {
     uint64_t t = to_us_since_boot(get_absolute_time());
     queue_try_add(&signal_queue, &t);
 }
@@ -25,7 +26,7 @@ void init_receive_pin(uint pin)
 {
     gpio_init(pin);
     gpio_pull_up(pin);
-    gpio_set_irq_enabled_with_callback(pin, GPIO_IRQ_EDGE_FALL | GPIO_IRQ_EDGE_RISE, true, &irq_NEC_Listener);
+    gpio_set_irq_enabled_with_callback(pin, GPIO_IRQ_EDGE_FALL | GPIO_IRQ_EDGE_RISE, true, &irq_Listener);
 }
 
 void init_diode_pin(uint pin)
@@ -36,7 +37,7 @@ void init_diode_pin(uint pin)
 }
 
 void led_blinking_task(void);
-void hid_task(NECAnalyzer& analyzer);
+void hid_task(NECAnalyzer& analyzer, RC5Analyzer& analyzerRC5);
 
 int main()
 {
@@ -44,7 +45,8 @@ int main()
 
     init_receive_pin(ReceivePin);
     init_diode_pin(DiodePin);
-    NECAnalyzer analyzer;
+    NECAnalyzer analyzerNEC;
+    RC5Analyzer analyzerRC5;
 
     board_init();
     tusb_init();
@@ -53,7 +55,7 @@ int main()
         tud_task(); // tinyusb device task
         led_blinking_task();
 
-        hid_task(analyzer);
+        hid_task(analyzerNEC, analyzerRC5);
     }
 
     return 0;
@@ -151,16 +153,18 @@ static void send_hid_report(uint8_t report_id, uint32_t btn)
 
 // Every 10ms, we will sent 1 report for each HID profile (keyboard, mouse etc ..)
 // tud_hid_report_complete_cb() is used to send the next report after previous one is complete
-void hid_task(NECAnalyzer& analyzer)
+void hid_task(NECAnalyzer& analyzerNEC, RC5Analyzer& analyzerRC5)
 {
+    static uint8_t last_type = 1;
+    static uint32_t start_ms = 0; 
     uint64_t new_time;
     bool got_value = queue_try_remove(&signal_queue, &new_time);
     if(got_value)
     {
-        bool success = analyzer.analyze_signal(new_time);
-        if(success)
+        bool success = analyzerNEC.analyze_signal(new_time);
+        bool successrc5 = analyzerRC5.analyze_signal(new_time);
+        if(success || successrc5)
         {
-            //printf("read %i with %i\n", analyzer.get_address(), analyzer.get_data());
             EndOfBlink = board_millis()+TimeOfBlinking;
 
             // Remote wakeup
@@ -171,10 +175,26 @@ void hid_task(NECAnalyzer& analyzer)
                 tud_remote_wakeup();
             }else
             {
-               
-                auto res = Actions.find({analyzer.get_address(), analyzer.get_data()});
+              if(success)
+              {  
+                auto res = Actions.find({analyzerNEC.get_address(), analyzerNEC.get_data()});
                 if(res != Actions.end()) 
+                {
                     send_hid_report(res->second.first, res->second.second);
+                    last_type = res->second.first;
+                    start_ms = board_millis();
+                }
+              }
+              if(successrc5)
+              {  
+                auto res = ActionsRC5.find({analyzerRC5.get_address(), analyzerRC5.get_data()});
+                if(res != ActionsRC5.end()) 
+                {
+                    send_hid_report(res->second.first, res->second.second);
+                    last_type = res->second.first;
+                    start_ms = board_millis();
+                }
+              }
             }
         }
     }else
@@ -185,6 +205,8 @@ void hid_task(NECAnalyzer& analyzer)
 
         if ( board_millis() - start_ms < interval_ms) return; // not enough time
         start_ms += interval_ms;
+
+        send_hid_report(last_type, 0);
     }
 }
 
@@ -196,7 +218,7 @@ void tud_hid_report_complete_cb(uint8_t instance, uint8_t const* report, uint8_t
   (void) instance;
   (void) len;
   // make one shot
-  send_hid_report(report[0], 0);
+  // send_hid_report(report[0], 0);
 }
 
 // Invoked when received GET_REPORT control request

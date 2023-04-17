@@ -18,6 +18,8 @@ target_sources(pico_pilot PUBLIC
         ${CMAKE_CURRENT_LIST_DIR}/main.cpp
         ${CMAKE_CURRENT_LIST_DIR}/usb_descriptors.c
         ${CMAKE_CURRENT_LIST_DIR}/irdecoders/necdecoder.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/irdecoders/basedecoder.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/irdecoders/rc5decoder.cpp
         )
 # Make sure TinyUSB can find tusb_config.h
 target_include_directories(pico_pilot PUBLIC
@@ -41,6 +43,8 @@ add_executable(pico_test_pilot)
 target_sources(pico_test_pilot PUBLIC
         ${CMAKE_CURRENT_LIST_DIR}/test_pilot_main.cpp
         ${CMAKE_CURRENT_LIST_DIR}/irdecoders/necdecoder.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/irdecoders/basedecoder.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/irdecoders/rc5decoder.cpp
         )
 target_link_libraries(pico_test_pilot PUBLIC pico_stdlib)
 pico_enable_stdio_usb(pico_test_pilot 1)
