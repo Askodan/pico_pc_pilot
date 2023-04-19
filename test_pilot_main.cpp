@@ -45,14 +45,14 @@ int main()
             bool sucrc = rc5Analyzer.analyze_signal(new_time);
             if(success)
             {
-                printf("read %i with %i\n", analyzer.get_address(), analyzer.get_data());
+                printf("read address %i command %i\n", analyzer.get_address(), analyzer.get_data());
                 gpio_put(PICO_DEFAULT_LED_PIN, 1);
                 sleep_ms(500);
                 gpio_put(PICO_DEFAULT_LED_PIN, 0);
             }
             if(sucrc)
             {
-                printf("read %i with %i\n", rc5Analyzer.get_address(), rc5Analyzer.get_data());
+                printf("read address %i command %i up bit %i\n", rc5Analyzer.get_address(), rc5Analyzer.get_data(), rc5Analyzer.get_up_bit());
                 gpio_put(PICO_DEFAULT_LED_PIN, 1);
                 sleep_ms(500);
                 gpio_put(PICO_DEFAULT_LED_PIN, 0);

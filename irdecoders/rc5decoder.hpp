@@ -8,6 +8,7 @@ class RC5Analyzer : public IRAnalyzer
 {
 public:
     virtual bool analyze_signal(uint64_t new_time) override;
+    bool get_up_bit() const;
 private:
     void init_message_analysis();
     void end_analysis();
@@ -27,4 +28,6 @@ private:
     std::bitset<7> com_set;
     const int address_size = 5;
     std::bitset<5> add_set;
+
+    bool up_bit = false;
 };

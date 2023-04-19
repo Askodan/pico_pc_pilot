@@ -165,7 +165,6 @@ void hid_task(NECAnalyzer& analyzerNEC, RC5Analyzer& analyzerRC5)
         bool successrc5 = analyzerRC5.analyze_signal(new_time);
         if(success || successrc5)
         {
-            EndOfBlink = board_millis()+TimeOfBlinking;
 
             // Remote wakeup
             if ( tud_suspended())
@@ -180,19 +179,30 @@ void hid_task(NECAnalyzer& analyzerNEC, RC5Analyzer& analyzerRC5)
                 auto res = Actions.find({analyzerNEC.get_address(), analyzerNEC.get_data()});
                 if(res != Actions.end()) 
                 {
-                    send_hid_report(res->second.first, res->second.second);
-                    last_type = res->second.first;
+                    send_hid_report(res->second.ReportID, res->second.Action);
+                    last_type = res->second.ReportID;
+
                     start_ms = board_millis();
+                    EndOfBlink = board_millis()+TimeOfBlinking;
                 }
               }
               if(successrc5)
               {  
+                static uint8_t last_command = 255;
+                static bool last_bit = false;
                 auto res = ActionsRC5.find({analyzerRC5.get_address(), analyzerRC5.get_data()});
-                if(res != ActionsRC5.end()) 
+                const bool found_command = res != ActionsRC5.end();
+                const bool new_command = last_command != analyzerRC5.get_data();
+                const bool new_button_press = last_bit != analyzerRC5.get_up_bit();
+                if(found_command && (new_command || !res->second.BlockRepeats || new_button_press)) 
                 {
-                    send_hid_report(res->second.first, res->second.second);
-                    last_type = res->second.first;
-                    start_ms = board_millis();
+                  last_bit = analyzerRC5.get_up_bit();
+                  last_command = analyzerRC5.get_data();
+                  send_hid_report(res->second.ReportID, res->second.Action);
+                  last_type = res->second.ReportID;
+                  
+                  start_ms = board_millis();
+                  EndOfBlink = board_millis()+TimeOfBlinking;
                 }
               }
             }

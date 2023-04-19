@@ -34,6 +34,11 @@ bool RC5Analyzer::analyze_signal(uint64_t new_time)
     return false;
 }
 
+bool RC5Analyzer::get_up_bit() const
+{
+    return up_bit;
+}
+
 void RC5Analyzer::init_message_analysis()
 {
     messageStarted = true;
@@ -69,6 +74,7 @@ void RC5Analyzer::analyze_double_interval()
 
 void RC5Analyzer::parse_message_to_data()
 {
+    up_bit = message[2];
     parse_address();
     parse_command();
 }
