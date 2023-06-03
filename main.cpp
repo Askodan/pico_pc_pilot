@@ -61,7 +61,7 @@ int main()
     return 0;
 }
 
-static void send_hid_report(uint8_t report_id, uint32_t btn)
+static void send_hid_report(uint8_t report_id, uint32_t btn, uint8_t modifier)
 {
   // skip if hid is not ready yet
   if ( !tud_hid_ready() ) return;
@@ -78,7 +78,7 @@ static void send_hid_report(uint8_t report_id, uint32_t btn)
         uint8_t keycode[6] = { 0 };
         keycode[0] = btn;
 
-        tud_hid_keyboard_report(REPORT_ID_KEYBOARD, 0, keycode);
+        tud_hid_keyboard_report(REPORT_ID_KEYBOARD, modifier, keycode);
         has_keyboard_key = true;
       }else
       {
@@ -179,7 +179,7 @@ void hid_task(NECAnalyzer& analyzerNEC, RC5Analyzer& analyzerRC5)
                 auto res = Actions.find({analyzerNEC.get_address(), analyzerNEC.get_data()});
                 if(res != Actions.end()) 
                 {
-                    send_hid_report(res->second.ReportID, res->second.Action);
+                    send_hid_report(res->second.ReportID, res->second.Action, res->second.Modifier);
                     last_type = res->second.ReportID;
 
                     start_ms = board_millis();
@@ -198,7 +198,7 @@ void hid_task(NECAnalyzer& analyzerNEC, RC5Analyzer& analyzerRC5)
                 {
                   last_bit = analyzerRC5.get_up_bit();
                   last_command = analyzerRC5.get_data();
-                  send_hid_report(res->second.ReportID, res->second.Action);
+                  send_hid_report(res->second.ReportID, res->second.Action, res->second.Modifier);
                   last_type = res->second.ReportID;
                   
                   start_ms = board_millis();
@@ -216,7 +216,7 @@ void hid_task(NECAnalyzer& analyzerNEC, RC5Analyzer& analyzerRC5)
         if ( board_millis() - start_ms < interval_ms) return; // not enough time
         start_ms += interval_ms;
 
-        send_hid_report(last_type, 0);
+        send_hid_report(last_type, 0, 0);
     }
 }
 
